@@ -1,0 +1,26 @@
+{
+  "rules": {
+    "indent": [1, 2],
+    "quotes": [1, "double"],
+    "linebreak-style": [1, "unix"],
+    "semi": [1, "always"],
+    "comma-dangle": 0,
+    "no-console": 0
+  },
+  "env": {
+    "es6": true,
+    "node": true,
+    "browser": true,
+  },
+  "plugins": [
+    "react"
+  ],
+  "globals": {
+    "__DEV__": true
+  },
+  "extends": "eslint:recommended",
+  "ecmaFeatures": {
+    "modules": true,
+    "jsx": true
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "react-skia",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "css-layout": "^1.0.0",
+    "invariant": "^2.1.1",
+    "linebreak": "^0.3.0",
+    "react": "^0.14.0"
+  },
+  "devDependencies": {
+    "babel": "^5.8.23",
+    "babel-loader": "^5.3.2"
+  }
+}

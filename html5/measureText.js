@@ -1,4 +1,5 @@
-var {isFontLoaded} = require("./fonts");
+import LineBreaker from "linebreak";
+import {isFontLoaded} from "./fonts";
 
 var canvas = document.createElement("canvas");
 var ctx = canvas.getContext("2d");
@@ -24,7 +25,7 @@ function getCacheKey (text, width, fontFace, fontSize, lineHeight) {
  * @param {Number} lineHeight The line height in CSS pixels
  * @return {Object} Measured text size with `width` and `height` members.
  */
-module.exports = function measureText (text, width, fontFace, fontSize, lineHeight) {
+export default function measureText(text, width, fontFace, fontSize, lineHeight) {
   var cacheKey = getCacheKey(text, width, fontFace, fontSize, lineHeight);
   var cached = _cache[cacheKey];
   if (cached) {
@@ -52,41 +53,41 @@ module.exports = function measureText (text, width, fontFace, fontSize, lineHeig
   measuredSize.height = lineHeight;
   measuredSize.lines = [];
 
-  // if (measuredSize.width <= width) {
+  if (measuredSize.width <= width) {
     // The entire text string fits.
     measuredSize.lines.push({width: measuredSize.width, text: text});
-  // } else {
-  //   // Break into multiple lines.
-  //   measuredSize.width = width;
-  //   currentLine = "";
-  //   breaker = new LineBreaker(text);
+  } else {
+    // Break into multiple lines.
+    measuredSize.width = width;
+    currentLine = "";
+    breaker = new LineBreaker(text);
 
-  //   while((bk = breaker.nextBreak())) {
-  //     var word = text.slice(lastBreak ? lastBreak.position : 0, bk.position);
+    while((bk = breaker.nextBreak())) {
+      var word = text.slice(lastBreak ? lastBreak.position : 0, bk.position);
 
-  //     tryLine = currentLine + word;
-  //     textMetrics = ctx.measureText(tryLine);
-  //     if (textMetrics.width > width || (lastBreak && lastBreak.required)) {
-  //       measuredSize.height += lineHeight;
-  //       measuredSize.lines.push({width: lastMeasuredWidth, text: currentLine.trim()});
-  //       currentLine = word;
-  //       lastMeasuredWidth = ctx.measureText(currentLine.trim()).width;
-  //     } else {
-  //       currentLine = tryLine;
-  //       lastMeasuredWidth = textMetrics.width;
-  //     }
+      tryLine = currentLine + word;
+      textMetrics = ctx.measureText(tryLine);
+      if (textMetrics.width > width || (lastBreak && lastBreak.required)) {
+        measuredSize.height += lineHeight;
+        measuredSize.lines.push({width: lastMeasuredWidth, text: currentLine.trim()});
+        currentLine = word;
+        lastMeasuredWidth = ctx.measureText(currentLine.trim()).width;
+      } else {
+        currentLine = tryLine;
+        lastMeasuredWidth = textMetrics.width;
+      }
 
-  //     lastBreak = bk;
-  //   }
+      lastBreak = bk;
+    }
 
-  //   currentLine = currentLine.trim();
-  //   if (currentLine.length > 0) {
-  //     textMetrics = ctx.measureText(currentLine);
-  //     measuredSize.lines.push({width: textMetrics, text: currentLine});
-  //   }
-  // }
+    currentLine = currentLine.trim();
+    if (currentLine.length > 0) {
+      textMetrics = ctx.measureText(currentLine);
+      measuredSize.lines.push({width: textMetrics, text: currentLine});
+    }
+  }
 
   _cache[cacheKey] = measuredSize;
 
   return measuredSize;
-};
+}

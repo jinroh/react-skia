@@ -1,34 +1,9 @@
-var measureText = require("./measureText");
-
 function clamp(number, min, max) {
   return Math.min(Math.max(number, min), max);
 }
 
-/**
- * Draw an image into a <canvas>. This operation requires that the image
- * already be loaded.
- *
- * @param {CanvasContext} context
- * @param {Image} image The source image (from ImageCache.get())
- * @param {Number} x The x-coordinate to begin drawing
- * @param {Number} y The y-coordinate to begin drawing
- * @param {Number} width The desired width
- * @param {Number} height The desired height
- * @param {Object} options Available options are:
- *   {Number} originalWidth
- *   {Number} originalHeight
- *   {Object} focusPoint {x,y}
- *   {String} backgroundColor
- */
-function drawImage (context, image, x, y, width, height, options) {
-  options = options || {};
-
-  if (options.backgroundColor) {
-    context.save();
-    context.fillStyle = options.backgroundColor;
-    context.fillRect(x, y, width, height);
-    context.restore();
-  }
+export function drawImage (context, image, { left: x, top: y, width, height }, style) {
+  style = style || {};
 
   var dx = 0;
   var dy = 0;
@@ -41,12 +16,20 @@ function drawImage (context, image, x, y, width, height, options) {
   var scale;
   var scaledSize;
   var actualSize;
-  var focusPoint = options.focusPoint;
+  var focusPoint = style.focusPoint;
 
   actualSize = {
     width: image.getWidth(),
     height: image.getHeight()
   };
+
+  if (width === 0) {
+    width = actualSize.width;
+  }
+
+  if (height === 0) {
+    height = actualSize.height;
+  }
 
   scale = Math.max(
     width / actualSize.width,
@@ -62,9 +45,9 @@ function drawImage (context, image, x, y, width, height, options) {
   if (focusPoint) {
     // Since image hints are relative to image "original" dimensions (original != actual),
     // use the original size for focal point cropping.
-    if (options.originalHeight) {
-      focusPoint.x *= (actualSize.height / options.originalHeight);
-      focusPoint.y *= (actualSize.height / options.originalHeight);
+    if (style.originalHeight) {
+      focusPoint.x *= (actualSize.height / style.originalHeight);
+      focusPoint.y *= (actualSize.height / style.originalHeight);
     }
   } else {
     // Default focal point to [0.5, 0.5]
@@ -91,23 +74,7 @@ function drawImage (context, image, x, y, width, height, options) {
   context.drawImage(image.getRawImage(), sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
-/**
- * @param {CanvasContext} context
- * @param {String} text The text string to render
- * @param {Number} x The x-coordinate to begin drawing
- * @param {Number} y The y-coordinate to begin drawing
- * @param {Number} width The maximum allowed width
- * @param {Number} height The maximum allowed height
- * @param {FontFace} fontFace The FontFace to to use
- * @param {Object} options Available options are:
- *   {Number} fontSize
- *   {Number} lineHeight
- *   {String} textAlign
- *   {String} color
- *   {String} backgroundColor
- */
-function drawText(context, text, fontFace, {top: x, left: y, width: maxWidth}, style) {
-  let textMetrics;
+export function drawText(context, textMetrics, fontFace, {left: x, top: y, width: maxWidth, height: maxHeight}, style) {
   let currX = x;
   let currY = y;
   let currText;
@@ -119,17 +86,9 @@ function drawText(context, text, fontFace, {top: x, left: y, width: maxWidth}, s
   let backgroundColor = style.backgroundColor || "transparent";
   let color = style.color || "#000";
 
-  textMetrics = measureText(
-    text,
-    maxWidth,
-    fontFace,
-    fontSize,
-    lineHeight
-  );
-
   context.save();
 
-  let {width,height} = textMetrics;
+  const {width,height,lines} = textMetrics;
 
   // Draw the background
   if (backgroundColor !== "transparent") {
@@ -140,8 +99,9 @@ function drawText(context, text, fontFace, {top: x, left: y, width: maxWidth}, s
   context.fillStyle = color;
   context.font = fontFace.attributes.style + " " + fontFace.attributes.weight + " " + fontSize + "px " + fontFace.family;
 
-  for (let index = 0; index < textMetrics.lines.length; index++) {
-    let line = textMetrics.lines[index];
+  const linesCount = lines.length;
+  for (let index = 0; index < linesCount; index++) {
+    let line = lines[index];
     currText = line.text;
     currY = (index === 0)
       ? (y + fontSize)
@@ -159,8 +119,8 @@ function drawText(context, text, fontFace, {top: x, left: y, width: maxWidth}, s
       currX = x;
     }
 
-    if ((index < textMetrics.lines.length - 1) &&
-      ((fontSize + lineHeight * (index + 1)) > height)) {
+    if ((index < linesCount - 1) &&
+        (fontSize + lineHeight * (index + 1) > height)) {
       currText = currText.replace(/\,?\s?\w+$/, "…");
     }
 
@@ -171,38 +131,3 @@ function drawText(context, text, fontFace, {top: x, left: y, width: maxWidth}, s
 
   context.restore();
 }
-
-/**
- * Draw a linear gradient
- *
- * @param {CanvasContext} context
- * @param {Number} x1 gradient start-x coordinate
- * @param {Number} y1 gradient start-y coordinate
- * @param {Number} x2 gradient end-x coordinate
- * @param {Number} y2 gradient end-y coordinate
- * @param {Array} colorStops Array of {(String)color, (Number)position} values
- * @param {Number} x x-coordinate to begin fill
- * @param {Number} y y-coordinate to begin fill
- * @param {Number} width how wide to fill
- * @param {Number} height how tall to fill
- */
-function drawGradient(context, x1, y1, x2, y2, colorStops, x, y, width, height) {
-  var grad;
-
-  context.save();
-  grad = context.createLinearGradient(x1, y1, x2, y2);
-
-  colorStops.forEach(function (colorStop) {
-    grad.addColorStop(colorStop.position, colorStop.color);
-  });
-
-  context.fillStyle = grad;
-  context.fillRect(x, y, width, height);
-  context.restore();
-}
-
-module.exports = {
-  drawImage: drawImage,
-  drawText: drawText,
-  drawGradient: drawGradient,
-};

@@ -1,5 +1,5 @@
 import {computeLayout} from "css-layout/src/Layout.js";
-import {FontFace, isFontLoaded} from "./fonts";
+import {ImageCache} from "./images";
 import {drawText, drawImage} from "./utils";
 
 export function repaintAll(renderTreeRootNode) {
@@ -14,11 +14,11 @@ function clear(node, context) {
 }
 
 function sortByZIndexAscending(a, b) {
-  return (a.zIndex || 0) - (b.zIndex || 0);
+  return (a.style.zIndex || 0) - (b.style.zIndex || 0);
 }
 
 function renderNode(node, context) {
-  const {type, style, layout, text, children} = node;
+  const {type, style, layout, children} = node;
 
   var hasOpacity = (style.opacity != null);
   if (hasOpacity && style.opacity <= 0) {
@@ -29,6 +29,9 @@ function renderNode(node, context) {
   switch (type) {
   case "text":
     drawingCustomFunc = drawLayoutedText;
+    break;
+  case "img":
+    drawingCustomFunc = drawLayoutedImage;
     break;
   }
 
@@ -52,7 +55,7 @@ function renderNode(node, context) {
   context.save();
   renderBase(style, layout, context);
   if (drawingCustomFunc) {
-    drawingCustomFunc(style, layout, text, context);
+    drawingCustomFunc(node, style, layout, context);
   }
   context.restore();
 
@@ -78,9 +81,16 @@ function renderBase(style, layout, context) {
   }
 }
 
-function drawLayoutedText(style, layout, text, context) {
-  var fontFace = style.fontFace || FontFace.Default();
-  if (isFontLoaded(fontFace)) {
-    drawText(context, text, fontFace, layout, style);
+function drawLayoutedText(node, style, layout, context) {
+  let textMetrics = node.textMetrics;
+  if (textMetrics) {
+    drawText(context, textMetrics, style.fontFace, layout, style);
+  }
+}
+
+function drawLayoutedImage(node, style, layout, context) {
+  var image = ImageCache.get(node._currentElement.props.src);
+  if (image.isLoaded()) {
+    drawImage(context, image, layout, style);
   }
 }

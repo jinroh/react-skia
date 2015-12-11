@@ -1,6 +1,8 @@
 import ReactMultiChild from "react/lib/ReactMultiChild";
 import assign from "react/lib/Object.assign";
 import invariant from "invariant";
+import {FontFace, isFontLoaded} from "./html5/fonts";
+import measureText from "./html5/measureText";
 
 export let rootNode;
 
@@ -9,6 +11,15 @@ export let rootNode;
 const CONTENT_TYPES = {
   "string": true,
   "number": true,
+};
+
+const DEFAULT_TEXT_STYLES = {
+  fontSize: 16,
+  lineHeight: 18,
+  textAlign: "left",
+  backgroundColor: "transparent",
+  color: "#000",
+  fontFace: FontFace.Default(),
 };
 
 function checkContentTypes(tag, children) {
@@ -29,6 +40,48 @@ function checkContentTypes(tag, children) {
   }
 }
 
+function measureTextLayout(width) {
+  // TODO(pierre): check if layout hasn't changed from last saved
+  // metrics
+  // if (this.textMetrics) {
+  //   return this.textMetrics;
+  // }
+
+  if (isFontLoaded(this.style.fontFace)) {
+    this.textMetrics = measureText(
+      this.text,
+      width,
+      this.style.fontFace,
+      this.style.fontSize,
+      this.style.lineHeight
+    );
+  }
+
+  if (this.textMetrics) {
+    return {
+      width:  this.textMetrics.width,
+      height: this.textMetrics.height,
+    };
+  } else {
+    return {
+      width:  0,
+      height: 0,
+    };
+  }
+}
+
+function applyDefaultStyles(node, defaults) {
+  var {style} = node;
+  for (var styleName in defaults) {
+    if (style[styleName] == null) {
+      style[styleName] = defaults[styleName];
+    }
+  }
+  if (!style.measure) {
+    style.measure = measureTextLayout.bind(node);
+  }
+}
+
 export class ReactSkiaComponent {
   constructor(tag) {
     this._tag = tag.toLowerCase();
@@ -37,7 +90,7 @@ export class ReactSkiaComponent {
     this._canvasContext = null;
     this._parentNode = null;
 
-    // NOTE(pierre): this is due to css-layout
+    // NOTE(pierre): this is for css-layout
     this.shouldUpdate = false;
     this.lastLayout = null;
     this.lineIndex = 0;
@@ -55,6 +108,7 @@ export class ReactSkiaComponent {
     this.type = this._tag;
     this.style = null;
     this.text = "";
+    this.textMetrics = null;
     this.isDirty = false;
     this.children = [];
   }
@@ -78,16 +132,17 @@ export class ReactSkiaComponent {
     const props = this._currentElement.props;
     const type = this.type;
 
+    this.style = (props && props.style) || {};
+    this.isDirty = true;
+
     const children = props && props.children || [];
     const childrenToUse = [].concat(children);
 
     checkContentTypes(type, childrenToUse);
 
-    this.style = props;
-    this.isDirty = true;
-
     if (type === "text") {
       this.text = childrenToUse.join("");
+      applyDefaultStyles(this, DEFAULT_TEXT_STYLES);
     }
     else {
       context.parent = this;
@@ -109,10 +164,8 @@ export class ReactSkiaComponent {
     const type = this.type;
 
     this._currentElement = nextElement;
-    this.style = nextProps;
-
-    // TODO(pierre): optimize this dirty flag
-    this.isDirty = true;
+    this.style = (nextProps && nextProps.style) || {};
+    this.dirtyLayout();
 
     const children = nextProps && nextProps.children;
     const childrenToUse = children == null ? [] : [].concat(children);
@@ -121,6 +174,7 @@ export class ReactSkiaComponent {
 
     if (type === "text") {
       this.text = childrenToUse.join("");
+      applyDefaultStyles(this, DEFAULT_TEXT_STYLES);
     }
     else {
       this.updateChildren(
@@ -143,6 +197,12 @@ export class ReactSkiaComponent {
 
   dirtyLayout() {
     this.isDirty = true;
+    this.layout.width = undefined;
+    this.layout.height = undefined;
+    this.layout.top = 0;
+    this.layout.left = 0;
+    this.layout.right = 0;
+    this.layout.bottom = 0;
     if (this._parentNode) {
       this._parentNode.dirtyLayout();
     }

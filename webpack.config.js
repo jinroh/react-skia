@@ -5,6 +5,9 @@ module.exports = {
   module: {
     loaders: [
       { test: /\.js$/, loader: "babel?loose=all" },
+    ],
+    postLoaders: [
+      { loader: "transform?brfs" }
     ]
   },
   plugins: [
@@ -15,5 +18,11 @@ module.exports = {
         NODE_ENV: JSON.stringify(process.env.NODE_ENV || "development")
       }
     }),
-  ]
+  ],
+  resolve: {
+    root: __dirname,
+    alias: {
+      brfs: __dirname + "/node_modules/brfs"
+    }
+  }
 };
